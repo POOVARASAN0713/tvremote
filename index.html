@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Remote - Web Remote Control</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>📱 TV Remote Control</h1>
+            <p class="subtitle">Control your Android TV from your browser</p>
+        </header>
+
+        <!-- Connection Section -->
+        <section class="connection-section">
+            <div class="card">
+                <h2>Connection</h2>
+                <div class="connection-form">
+                    <div class="input-group">
+                        <label for="serverUrl">Server URL:</label>
+                        <input type="text" id="serverUrl" placeholder="http://localhost:3000" value="http://localhost:3000">
+                        <small>Enter the address of the proxy server</small>
+                    </div>
+                    <div class="input-group">
+                        <label for="tvIp">TV IP Address:</label>
+                        <input type="text" id="tvIp" placeholder="192.168.1.100" pattern="[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}">
+                        <small>Your Android TV's IP address</small>
+                    </div>
+                    <div class="button-group">
+                        <button id="connectBtn" class="btn btn-primary">Connect</button>
+                        <button id="disconnectBtn" class="btn btn-secondary" disabled>Disconnect</button>
+                        <button id="demoModeBtn" class="btn btn-demo">Try Demo Mode</button>
+                    </div>
+                    <div id="status" class="status disconnected">Disconnected</div>
+                    <div id="demoModeIndicator" class="demo-indicator" style="display: none;">
+                        <span>🎮 Demo Mode Active - Explore the interface without connecting!</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mode Selection Modal -->
+        <div id="modeSelectionModal" class="modal">
+            <div class="modal-content">
+                <h2>Choose Control Mode</h2>
+                <p>Select how you want to control your TV:</p>
+                <div class="mode-selection">
+                    <button class="mode-btn" id="selectRemoteMode">
+                        <div class="mode-icon">📱</div>
+                        <div class="mode-title">Remote Control</div>
+                        <div class="mode-desc">Simple TV remote with navigation and volume controls</div>
+                    </button>
+                    <button class="mode-btn" id="selectJoystickMode">
+                        <div class="mode-icon">🎮</div>
+                        <div class="mode-title">Gaming Controller</div>
+                        <div class="mode-desc">Full gamepad with joystick, action buttons, and triggers</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode Switcher (shown when connected or in demo mode) -->
+        <section id="modeSwitcher" class="mode-switcher-section" style="display: none;">
+            <div class="card">
+                <div class="mode-switcher">
+                    <span class="current-mode-label">Current Mode: <strong id="currentModeText">-</strong></span>
+                    <button id="switchModeBtn" class="btn btn-secondary">Switch Mode</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gaming Controller Section -->
+        <section id="gamingControllerSection" class="gaming-controller-section" style="display: none;">
+            <div class="card">
+                <div class="controller-header">
+                    <h2>🎮 Gaming Controller</h2>
+                    <div class="controller-controls">
+                        <button id="editLayoutBtn" class="btn btn-secondary">Edit Layout</button>
+                        <button id="resetLayoutBtn" class="btn btn-secondary" style="display: none;">Reset Layout</button>
+                        <button id="saveLayoutBtn" class="btn btn-primary" style="display: none;">Save Layout</button>
+                    </div>
+                </div>
+                <div id="editModeIndicator" class="edit-mode-indicator" style="display: none;">
+                    <span>✏️ Edit Mode: Drag buttons to reposition them</span>
+                </div>
+                <div class="controller-layout" id="controllerLayout">
+                    <!-- Left Side: D-Pad and Joystick -->
+                    <div class="controller-left">
+                        <div class="joystick-wrapper draggable-container">
+                            <canvas id="joystickCanvas" width="200" height="200"></canvas>
+                            <div class="joystick-label">Left Stick</div>
+                        </div>
+                        <div class="dpad-wrapper draggable-container" data-button-group="dpad">
+                            <div class="dpad-container">
+                                <div class="dpad-row">
+                                    <button class="dpad-btn draggable-btn" id="btnUp" data-key="KEYCODE_DPAD_UP" data-button-id="btnUp">↑</button>
+                                </div>
+                                <div class="dpad-row">
+                                    <button class="dpad-btn draggable-btn" id="btnLeft" data-key="KEYCODE_DPAD_LEFT" data-button-id="btnLeft">←</button>
+                                    <button class="dpad-btn dpad-center draggable-btn" id="btnOk" data-key="KEYCODE_DPAD_CENTER" data-button-id="btnOk">OK</button>
+                                    <button class="dpad-btn draggable-btn" id="btnRight" data-key="KEYCODE_DPAD_RIGHT" data-button-id="btnRight">→</button>
+                                </div>
+                                <div class="dpad-row">
+                                    <button class="dpad-btn draggable-btn" id="btnDown" data-key="KEYCODE_DPAD_DOWN" data-button-id="btnDown">↓</button>
+                                </div>
+                            </div>
+                            <div class="dpad-label">D-Pad</div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Shoulder Buttons -->
+                    <div class="controller-center">
+                        <div class="shoulder-buttons">
+                            <button class="shoulder-btn shoulder-left draggable-btn" id="btnL1" data-key="KEYCODE_BUTTON_L1" data-button-id="btnL1">L1</button>
+                            <button class="shoulder-btn shoulder-left draggable-btn" id="btnL2" data-key="KEYCODE_BUTTON_L2" data-button-id="btnL2">L2</button>
+                        </div>
+                        <div class="center-buttons">
+                            <button class="center-btn draggable-btn" id="btnStart" data-key="KEYCODE_BUTTON_START" data-button-id="btnStart">Start</button>
+                            <button class="center-btn draggable-btn" id="btnSelect" data-key="KEYCODE_BUTTON_SELECT" data-button-id="btnSelect">Select</button>
+                        </div>
+                        <div class="shoulder-buttons">
+                            <button class="shoulder-btn shoulder-right draggable-btn" id="btnR1" data-key="KEYCODE_BUTTON_R1" data-button-id="btnR1">R1</button>
+                            <button class="shoulder-btn shoulder-right draggable-btn" id="btnR2" data-key="KEYCODE_BUTTON_R2" data-button-id="btnR2">R2</button>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Action Buttons -->
+                    <div class="controller-right">
+                        <div class="action-buttons">
+                            <div class="action-row">
+                                <button class="action-btn action-yellow draggable-btn" id="btnY" data-key="KEYCODE_BUTTON_Y" data-button-id="btnY">Y</button>
+                            </div>
+                            <div class="action-row">
+                                <button class="action-btn action-red draggable-btn" id="btnX" data-key="KEYCODE_BUTTON_X" data-button-id="btnX">X</button>
+                                <button class="action-btn action-blue draggable-btn" id="btnB" data-key="KEYCODE_BUTTON_B" data-button-id="btnB">B</button>
+                            </div>
+                            <div class="action-row">
+                                <button class="action-btn action-green draggable-btn" id="btnA" data-key="KEYCODE_BUTTON_A" data-button-id="btnA">A</button>
+                            </div>
+                        </div>
+                        <div class="action-label">Action Buttons</div>
+                    </div>
+                </div>
+                <div class="joystick-info">
+                    <div>X: <span id="joystickX">0</span></div>
+                    <div>Y: <span id="joystickY">0</span></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Remote Control Section -->
+        <section id="remoteControlSection" class="remote-control-section" style="display: none;">
+            <div class="card">
+                <h2>📱 Remote Control</h2>
+                <!-- Navigation D-Pad -->
+                <div class="remote-dpad-section">
+                    <h3>Navigation</h3>
+                    <div class="dpad-container">
+                        <div class="dpad-row">
+                            <button class="dpad-btn" id="remoteBtnUp" data-key="KEYCODE_DPAD_UP">↑</button>
+                        </div>
+                        <div class="dpad-row">
+                            <button class="dpad-btn" id="remoteBtnLeft" data-key="KEYCODE_DPAD_LEFT">←</button>
+                            <button class="dpad-btn dpad-center" id="remoteBtnOk" data-key="KEYCODE_DPAD_CENTER">OK</button>
+                            <button class="dpad-btn" id="remoteBtnRight" data-key="KEYCODE_DPAD_RIGHT">→</button>
+                        </div>
+                        <div class="dpad-row">
+                            <button class="dpad-btn" id="remoteBtnDown" data-key="KEYCODE_DPAD_DOWN">↓</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TV Control Buttons -->
+        <section id="buttonsSection" class="buttons-section" style="display: none;">
+            <div class="card">
+                <h2>TV Controls</h2>
+                <div class="button-grid">
+                    <button class="control-btn" id="btnPower" data-key="KEYCODE_POWER">Power</button>
+                    <button class="control-btn" id="btnHome" data-key="KEYCODE_HOME">Home</button>
+                    <button class="control-btn" id="btnBack" data-key="KEYCODE_BACK">Back</button>
+                    <button class="control-btn" id="btnMenu" data-key="KEYCODE_MENU">Menu</button>
+                    <button class="control-btn" id="btnVolUp" data-key="KEYCODE_VOLUME_UP">Vol +</button>
+                    <button class="control-btn" id="btnVolDown" data-key="KEYCODE_VOLUME_DOWN">Vol -</button>
+                    <button class="control-btn" id="btnMute" data-key="KEYCODE_VOLUME_MUTE">Mute</button>
+                    <button class="control-btn" id="btnPlay" data-key="KEYCODE_MEDIA_PLAY_PAUSE">Play/Pause</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Instructions -->
+        <section class="instructions-section">
+            <div class="card">
+                <h2>📖 Setup Instructions</h2>
+                <div class="instructions">
+                    <h3>📱 Mobile-Only Setup (No Computer Needed!):</h3>
+                    <ol>
+                        <li><strong>Install Termux:</strong> Download from Play Store or F-Droid</li>
+                        <li><strong>In Termux, run:</strong>
+                            <ul>
+                                <li><code>pkg update && pkg install nodejs git</code></li>
+                                <li><code>cd ~/storage/downloads/tv-remote</code> (or your project folder)</li>
+                                <li><code>npm install</code></li>
+                                <li><code>node server.js</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>Find your phone's IP:</strong> In Termux, type <code>ifconfig wlan0</code></li>
+                        <li><strong>Open browser on phone:</strong> Go to <code>http://YOUR_PHONE_IP:3000</code></li>
+                        <li><strong>See <a href="MOBILE_ONLY_SETUP.md" target="_blank">MOBILE_ONLY_SETUP.md</a> for complete guide</strong></li>
+                    </ol>
+                    
+                    <h3>💻 Using Computer (Alternative):</h3>
+                    <ol>
+                        <li><strong>Find your computer's IP:</strong>
+                            <ul>
+                                <li>Windows: Open CMD, type <code>ipconfig</code>, find "IPv4 Address"</li>
+                                <li>Mac/Linux: Open Terminal, type <code>ifconfig</code> or <code>hostname -I</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>Start the server on your computer:</strong> Run <code>npm start</code></li>
+                        <li><strong>On your phone:</strong> Open browser and go to <code>http://YOUR_COMPUTER_IP:3000</code></li>
+                        <li><strong>Example:</strong> If computer IP is 192.168.1.50, use <code>http://192.168.1.50:3000</code></li>
+                    </ol>
+                    
+                    <h3>For TV Connection:</h3>
+                    <ol>
+                        <li><strong>Enable Developer Options on TV:</strong> Settings → About → Tap "Build" 7 times</li>
+                        <li><strong>Enable ADB Debugging:</strong> Settings → Developer Options → Enable "ADB debugging" and "Network debugging"</li>
+                        <li><strong>Find TV's IP:</strong> Settings → Network → Wi-Fi (note the IP address)</li>
+                        <li><strong>Enter TV IP above and click Connect</strong></li>
+                    </ol>
+                    
+                    <div class="info-box">
+                        <strong>💡 Quick Tips:</strong>
+                        <ul>
+                            <li><strong>No Computer?</strong> Use Termux on your phone - see <a href="MOBILE_ONLY_SETUP.md" target="_blank">MOBILE_ONLY_SETUP.md</a></li>
+                            <li>All devices must be on the same Wi-Fi network</li>
+                            <li>Server URL: Use your phone's IP if using Termux, or computer's IP if using computer</li>
+                            <li>See <a href="MOBILE_GUIDE.md" target="_blank">MOBILE_GUIDE.md</a> for detailed mobile instructions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
